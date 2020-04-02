@@ -103,7 +103,7 @@ namespace CompressImagesFunction
                 RepoOwner = compressImagesMessage.Owner,
             });
 
-            if (branchExists)
+            if (branchExists && !compressImagesMessage.IsRebase)
             {
                 logger.LogInformation("CompressImagesFunction: skipping repo {Owner}/{RepoName} as branch exists", compressImagesMessage.Owner, compressImagesMessage.RepoName);
                 return;
@@ -116,6 +116,7 @@ namespace CompressImagesFunction
                 Password = installationToken.Token,
                 RepoName = compressImagesMessage.RepoName,
                 RepoOwner = compressImagesMessage.Owner,
+                IsRebase = compressImagesMessage.IsRebase,
                 PgpPrivateKey = KnownEnvironmentVariables.PGP_PRIVATE_KEY,
                 PgPPassword = KnownEnvironmentVariables.PGP_PASSWORD,
                 CompressImagesMessage = compressImagesMessage,

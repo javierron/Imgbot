@@ -134,7 +134,14 @@ namespace CompressImagesFunction
             repo.Reset(ResetMode.Mixed, repo.Head.Tip);
 
             // optimize images
-            var imagePaths = ImageQuery.FindImages(parameters.LocalPath, repoConfiguration);
+            string[] imagePaths;
+            if(parameters.IsRebase){
+                //TODO: find conflicting images
+                imagePaths = ["this", "are", "the", "conflicting", "images"];
+            }else{
+                imagePaths = ImageQuery.FindImages(parameters.LocalPath, repoConfiguration);
+            }
+
             var optimizedImages = OptimizeImages(repo, parameters.LocalPath, imagePaths, logger, repoConfiguration.AggressiveCompression);
             if (optimizedImages.Length == 0)
                 return false;
@@ -210,6 +217,13 @@ namespace CompressImagesFunction
             }
             else
             {
+                if(parameters.IsRebase){
+                    // commit
+                    // cherry-pick
+                    // squash
+                    // rebase
+                }
+
                 repo.Network.Push(remote, $"refs/heads/{KnownGitHubs.BranchName}", new PushOptions
                 {
                     CredentialsProvider = credentialsProvider,
