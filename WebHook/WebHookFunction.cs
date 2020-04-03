@@ -77,8 +77,6 @@ namespace WebHook
                     var commentHook = JsonConvert.DeserializeObject<IssueCommentHook>(await req.Content.ReadAsStringAsync());
                     result = await ProcessIssueCommentAsync(commentHook, marketplaceTable, settingsTable, routerMessages, openPrMessages, deleteBranchMessages, logger)
                                     .ConfigureAwait(false);
-                    logger.LogInformation("HOOK: {hook}", commentHook.issue.pull_request.url);
-                    throw new Exception("Not implemented... yet");
                     break;
             }
 
@@ -195,7 +193,7 @@ namespace WebHook
 
             await routerMessages.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(new RouterMessage
             {
-                InstallationId = hook.installation.id,
+                InstallationId = 123, // "hook.installation.id" //TODO: where does this come from? Not in the issue_comment webhook payload.
                 Owner = hook.repository.owner.login,
                 RepoName = hook.repository.name,
                 CloneUrl = $"https://github.com/{hook.repository.full_name}",
@@ -204,7 +202,7 @@ namespace WebHook
 
             logger.LogInformation("ProcessIssueComment: Added RouterMessage for {Owner}/{RepoName}", hook.repository.owner.login, hook.repository.name);
 
-            return "truth"
+            return "truth";
         }
 
 

@@ -137,7 +137,7 @@ namespace CompressImagesFunction
             string[] imagePaths;
             if(parameters.IsRebase){
                 //TODO: find conflicting images
-                imagePaths = ["this", "are", "the", "conflicting", "images"];
+                imagePaths = new string[] {"this", "are", "the", "conflicting", "images"};
             }else{
                 imagePaths = ImageQuery.FindImages(parameters.LocalPath, repoConfiguration);
             }
