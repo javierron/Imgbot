@@ -183,17 +183,19 @@ namespace WebHook
             CloudQueue deleteBranchMessages,
             ILogger logger)
         {
-            if(hook.issue.pull_request == null){
+            if (hook.issue.pull_request == null)
+            {
                 return "This is not a PR";
             }
 
-            if(hook.comment.body != "@ImgBot rebase"){
+            if (hook.comment.body != "@imgbot rebase")
+            {
                 return "Not an ImgBot directive";
             }
 
             await routerMessages.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(new RouterMessage
             {
-                InstallationId = 123, // "hook.installation.id" //TODO: where does this come from? Not in the issue_comment webhook payload.
+                InstallationId = hook.installation.id,
                 Owner = hook.repository.owner.login,
                 RepoName = hook.repository.name,
                 CloneUrl = $"https://github.com/{hook.repository.full_name}",
@@ -204,7 +206,6 @@ namespace WebHook
 
             return "truth";
         }
-
 
         private static async Task<string> ProcessInstallationAsync(Hook hook, CloudTable marketplaceTable, CloudQueue routerMessages, CloudTable installationTable, ILogger logger)
         {

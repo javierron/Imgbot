@@ -76,7 +76,6 @@ namespace CompressImagesFunction
                 AccessTokensUrl = string.Format(KnownGitHubs.AccessTokensUrlFormat, compressImagesMessage.InstallationId),
                 AppId = KnownGitHubs.AppId,
             };
-
             var installationToken = await installationTokenProvider.GenerateAsync(
                 installationTokenParameters,
                 KnownEnvironmentVariables.APP_PRIVATE_KEY);
@@ -140,15 +139,15 @@ namespace CompressImagesFunction
                 });
             }
 
-            try
-            {
-                Directory.Delete(compressImagesParameters.LocalPath, recursive: true);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Error cleaning up local directory");
-            }
 
+            // try
+            // {
+            //     Directory.Delete(compressImagesParameters.LocalPath, recursive: true);
+            // }
+            // catch (Exception exception)
+            // {
+            //     logger.LogError(exception, "Error cleaning up local directory");
+            // }
             logger.LogInformation("CompressImagesFunction: finished run for {Owner}/{RepoName}", compressImagesMessage.Owner, compressImagesMessage.RepoName);
         }
     }
