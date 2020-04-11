@@ -142,7 +142,7 @@ namespace CompressImagesFunction
                 Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
 
                 var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Tip.Tree, repo.Head.Tip.Tree);
-
+                
                 if (diff == null)
                 {
                     logger.LogInformation("Something went wrong while doing rebase");
@@ -154,18 +154,19 @@ namespace CompressImagesFunction
                     {
                         if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
                         {
+                            var path = parameters.LocalPath + "/" + c.Path;
                             if (c.Status == ChangeKind.Deleted)
                             {
-                                deletedImagePaths.Add(parameters.LocalPath + "/" + c.Path);
+                                deletedImagePaths.Add(path.Replace("\\", "/"));
                             } 
                             else if (c.Status == ChangeKind.Added || c.Status == ChangeKind.Modified)
                             {
-                                addedOrModifiedImagePaths.Add(parameters.LocalPath + "/" + c.Path);
+                                addedOrModifiedImagePaths.Add(path.Replace("\\", "/"));
                             }
                         }
                     }
                 }
-                imagePaths = addedOrModifiedImagePaths.ToArray();
+                imagePaths = ImageQuery.FilterOutIgnoredFiles(addedOrModifiedImagePaths, repoConfiguration);
             }
             else
             {
