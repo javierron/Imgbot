@@ -134,10 +134,39 @@ namespace CompressImagesFunction
 
             // optimize images
             string[] imagePaths;
+            List<string> addedOrModifiedImagePaths = new List<string>();
+            List<string> deletedImagePaths = new List<string>();
             if (parameters.IsRebase)
             {
-                // TODO: find conflicting images and new images :)
-                imagePaths = new string[] { parameters.LocalPath + "/1.png" };
+                var refspec = string.Format("{0}:{0}", KnownGitHubs.BranchName);
+                Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
+
+                var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Tip.Tree, repo.Head.Tip.Tree);
+                
+                if (diff == null)
+                {
+                    logger.LogInformation("Something went wrong while doing rebase");
+                    return false;
+                }
+                else
+                {
+                    foreach (TreeEntryChanges c in diff)
+                    {
+                        if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
+                        {
+                            var path = parameters.LocalPath + "/" + c.Path;
+                            if (c.Status == ChangeKind.Deleted)
+                            {
+                                deletedImagePaths.Add(path.Replace("\\", "/"));
+                            } 
+                            else if (c.Status == ChangeKind.Added || c.Status == ChangeKind.Modified)
+                            {
+                                addedOrModifiedImagePaths.Add(path.Replace("\\", "/"));
+                            }
+                        }
+                    }
+                }
+                imagePaths = ImageQuery.FilterOutIgnoredFiles(addedOrModifiedImagePaths, repoConfiguration);
             }
             else
             {
