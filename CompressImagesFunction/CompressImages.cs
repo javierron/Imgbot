@@ -131,52 +131,44 @@ namespace CompressImagesFunction
 
             // reset any mean files
             repo.Reset(ResetMode.Mixed, repo.Head.Tip);
-            Console.WriteLine("flerb");
+
             // optimize images
             string[] imagePaths;
             List<string> addedOrModifiedImagePaths = new List<string>();
             List<string> deletedImagePaths = new List<string>();
             if (parameters.IsRebase)
             {
-                Console.WriteLine("This is rebase");
-                //TODO: find conflicting images https://libgit2.org/libgit2/#HEAD/group/diff/git_diff_foreach
-            
                 var refspec = string.Format("{0}:{0}", KnownGitHubs.BranchName);
                 Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
 
-                Console.WriteLine("Diff: repo.Branches[KnownGitHubs.BranchName].Tip.Sha: " + repo.Branches[KnownGitHubs.BranchName].Tip.Sha + "repo.Head.Tip.Sha: " +  repo.Head.Tip.Sha);
                 var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Tip.Tree, repo.Head.Tip.Tree);
 
-                if (diff != null) 
+                if (diff == null)
+                {
+                    logger.LogInformation("Something went wrong while doing rebase");
+                    return false;
+                }
+                else
                 {
                     foreach (TreeEntryChanges c in diff)
                     {
                         if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
                         {
-                            Console.WriteLine("Status: " + c.Status + " - Path: " + parameters.LocalPath + "/" + c.Path);
-                            
-                            if (c.Status.ToString().Equals("Deleted"))
+                            if (c.Status == ChangeKind.Deleted)
                             {
                                 deletedImagePaths.Add(parameters.LocalPath + "/" + c.Path);
                             } 
-                            else if (c.Status.ToString().Equals("Added") || c.Status.ToString().Equals("Modified"))
+                            else if (c.Status == ChangeKind.Added || c.Status == ChangeKind.Modified)
                             {
                                 addedOrModifiedImagePaths.Add(parameters.LocalPath + "/" + c.Path);
                             }
                         }
                     }
-                } 
-                else 
-                {
-                    Console.WriteLine("Diff is null");
                 }
-                
-                
                 imagePaths = addedOrModifiedImagePaths.ToArray();
             }
             else
             {
-                Console.WriteLine("not rebase");
                 imagePaths = ImageQuery.FindImages(parameters.LocalPath, repoConfiguration);
             }
 
