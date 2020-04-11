@@ -141,31 +141,38 @@ namespace CompressImagesFunction
                 var refspec = string.Format("{0}:{0}", KnownGitHubs.BranchName);
                 Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
 
-                var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Tip.Tree, repo.Head.Tip.Tree);
+                var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Commits.ElementAt(1).Tree, repo.Head.Tip.Tree);
                 
                 if (diff == null)
                 {
                     logger.LogInformation("Something went wrong while doing rebase");
                     return false;
                 }
-                else
+
+                foreach (TreeEntryChanges c in diff)
                 {
-                    foreach (TreeEntryChanges c in diff)
+                    if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
                     {
-                        if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
+                        var path = parameters.LocalPath + "/" + c.Path;
+                        var oldpath = parameters.LocalPath + "/" + c.OldPath;
+                        
+                        switch (c.Status)
                         {
-                            var path = parameters.LocalPath + "/" + c.Path;
-                            if (c.Status == ChangeKind.Deleted)
-                            {
-                                deletedImagePaths.Add(path.Replace("\\", "/"));
-                            } 
-                            else if (c.Status == ChangeKind.Added || c.Status == ChangeKind.Modified)
-                            {
+                            case ChangeKind.Added:
+                            case ChangeKind.Modified:
                                 addedOrModifiedImagePaths.Add(path.Replace("\\", "/"));
-                            }
+                                break;
+                            case ChangeKind.Renamed:
+                                addedOrModifiedImagePaths.Add(path.Replace("\\", "/"));
+                                deletedImagePaths.Add(oldpath.Replace("\\", "/"));
+                                break;
+                            case ChangeKind.Deleted:
+                                deletedImagePaths.Add(path.Replace("\\", "/"));
+                                break;
                         }
                     }
                 }
+                
                 imagePaths = ImageQuery.FilterOutIgnoredFiles(addedOrModifiedImagePaths, repoConfiguration);
             }
             else
@@ -204,12 +211,25 @@ namespace CompressImagesFunction
                 var cherryPickOptions = new CherryPickOptions() {
                     MergeFileFavor = MergeFileFavor.Theirs,
                 };
-                repo.CherryPick(newCommit, signature, cherryPickOptions);
+                var cherryPickResult = repo.CherryPick(newCommit, signature, cherryPickOptions);
+
+                if (cherryPickResult.Status == CherryPickStatus.Conflicts)
+                {
+                    var status = repo.RetrieveStatus(new LibGit2Sharp.StatusOptions() { });
+                    foreach (var item in status)
+                    {   
+                        if(item.State == FileStatus.Conflicted){
+                            Commands.Stage(repo, item.FilePath);
+                        }
+                    }
+                    repo.Commit(commitMessage, signature, signature);
+                }
+                  
 
                 //New commit message creation
                 var previousCommitResults = CompressionResult.ParseCommitMessage(oldCommit.Message);
                 var mergedResults = CompressionResult.Merge(optimizedImages, previousCommitResults);
-                var filteredResults = CompressionResult.Filter(mergedResults, deletedImagePaths.ToArray()); //TODO: get removed images
+                var filteredResults = CompressionResult.Filter(mergedResults, deletedImagePaths.ToArray());
                 var squashCommitMessage = CommitMessage.Create(filteredResults);
 
                 // squash
@@ -230,7 +250,6 @@ namespace CompressImagesFunction
                     foreach (var item in status)
                     {   
                         if(item.State == FileStatus.Conflicted){
-                            //TODO: check that this works for renames
                             if(imagePaths.Contains(parameters.LocalPath + "/" + item.FilePath))
                             {
                                 Commands.Stage(repo, item.FilePath);

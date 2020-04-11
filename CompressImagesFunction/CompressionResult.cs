@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -77,10 +78,8 @@ namespace CompressImagesFunction
 
         public static CompressionResult[] Filter(CompressionResult[] OptimizedImages, string[] toRemove)
         {
-            List<CompressionResult> list = new List<CompressionResult>(OptimizedImages);
-
-            var filtered = list.Where(r => !toRemove.Contains(r.Title));
-
+            var relativePaths = toRemove.Select(path => Path.DirectorySeparatorChar + Path.GetFileName(path));
+            var filtered = OptimizedImages.Where(r => !relativePaths.Contains(r.Title));
             return filtered.ToArray();
         }
     }
