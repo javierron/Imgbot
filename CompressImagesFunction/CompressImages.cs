@@ -121,7 +121,7 @@ namespace CompressImagesFunction
                 return false;
             }
 
-            // Should not create branch if we are compressing Wiki
+            // Should not create branch if we are compressing Wiki or performing rebase
             if (isWikiCompress == false && !parameters.IsRebase)
             {
                 // check out the branch
@@ -191,14 +191,13 @@ namespace CompressImagesFunction
             {
                 var baseBranch = repo.Head;
                 var newCommit = baseBranch.Tip;
+                var oldCommit = repo.Branches[KnownGitHubs.BranchName].Tip;
+
                 // we need to reset the default branch so that we can
                 // rebase to it later.
                 repo.Reset(ResetMode.Hard, repo.Head.Commits.ElementAt(1));
 
-                var refspec = string.Format("{0}:{0}", KnownGitHubs.BranchName);
-
-                
-                Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
+                //checkout to imgbot branch. TODO: remove because this is needed earlier on diff
                 Commands.Checkout(repo, KnownGitHubs.BranchName);
 
                 // cherry-pick
@@ -207,23 +206,43 @@ namespace CompressImagesFunction
                 };
                 repo.CherryPick(newCommit, signature, cherryPickOptions);
 
+                //New commit message creation
+                var previousCommitResults = CompressionResult.ParseCommitMessage(oldCommit.Message);
+                var mergedResults = CompressionResult.Merge(optimizedImages, previousCommitResults);
+                var filteredResults = CompressionResult.Filter(mergedResults, deletedImagePaths.ToArray()); //TODO: get removed images
+                var squashCommitMessage = CommitMessage.Create(filteredResults);
+
                 // squash
                 var baseCommit = repo.Head.Commits.ElementAt(2);
                 repo.Reset(ResetMode.Soft, baseCommit);
-                var squashedCommitMessage = "SQUASHED"; // TODO: create commit message with ALL files, parse and "merge" commit messages?
-                repo.Commit(squashedCommitMessage, signature, signature); 
+                repo.Commit(squashCommitMessage, signature, signature); 
 
                 // rebase
                 var rebaseOptions = new RebaseOptions() {
                     FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
                 };
 
-                repo.Rebase.Start(repo.Head, baseBranch, null, new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
-                foreach (var image in optimizedImages)
+                var rebaseResult = repo.Rebase.Start(repo.Head, baseBranch, null, new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
+                
+                while (rebaseResult.Status == RebaseStatus.Conflicts)
                 {
-                    Commands.Stage(repo, image.OriginalPath);
+                    var status = repo.RetrieveStatus(new LibGit2Sharp.StatusOptions() { });
+                    foreach (var item in status)
+                    {   
+                        if(item.State == FileStatus.Conflicted){
+                            //TODO: check that this works for renames
+                            if(imagePaths.Contains(parameters.LocalPath + "/" + item.FilePath))
+                            {
+                                Commands.Stage(repo, item.FilePath);
+                            }
+                            else
+                            {
+                                Commands.Remove(repo, item.FilePath);
+                            }
+                        }
+                    }
+                    rebaseResult = repo.Rebase.Continue(new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
                 }
-                repo.Rebase.Continue(new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
             }
 
             // We just made a normal commit, now we are going to capture all the values generated from that commit
