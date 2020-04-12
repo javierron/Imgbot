@@ -142,7 +142,7 @@ namespace CompressImagesFunction
                 Commands.Fetch(repo, "origin", new List<string> { refspec }, null, "fetch");
 
                 var diff = repo.Diff.Compare<TreeChanges>(repo.Branches[KnownGitHubs.BranchName].Commits.ElementAt(1).Tree, repo.Head.Tip.Tree);
-                
+
                 if (diff == null)
                 {
                     logger.LogInformation("Something went wrong while doing rebase");
@@ -151,11 +151,11 @@ namespace CompressImagesFunction
 
                 foreach (TreeEntryChanges c in diff)
                 {
-                    if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path))) 
+                    if (KnownImgPatterns.ImgExtensions.Contains(Path.GetExtension(c.Path)))
                     {
                         var path = parameters.LocalPath + "/" + c.Path;
                         var oldpath = parameters.LocalPath + "/" + c.OldPath;
-                        
+
                         switch (c.Status)
                         {
                             case ChangeKind.Added:
@@ -172,7 +172,7 @@ namespace CompressImagesFunction
                         }
                     }
                 }
-                
+
                 imagePaths = ImageQuery.FilterOutIgnoredFiles(addedOrModifiedImagePaths, repoConfiguration);
             }
             else
@@ -204,11 +204,12 @@ namespace CompressImagesFunction
                 // rebase to it later.
                 repo.Reset(ResetMode.Hard, repo.Head.Commits.ElementAt(1));
 
-                //checkout to imgbot branch. TODO: remove because this is needed earlier on diff
+                // checkout to imgbot branch. TODO: remove because this is needed earlier on diff
                 Commands.Checkout(repo, KnownGitHubs.BranchName);
 
                 // cherry-pick
-                var cherryPickOptions = new CherryPickOptions() {
+                var cherryPickOptions = new CherryPickOptions()
+                {
                     MergeFileFavor = MergeFileFavor.Theirs,
                 };
                 var cherryPickResult = repo.CherryPick(newCommit, signature, cherryPickOptions);
@@ -217,16 +218,17 @@ namespace CompressImagesFunction
                 {
                     var status = repo.RetrieveStatus(new LibGit2Sharp.StatusOptions() { });
                     foreach (var item in status)
-                    {   
-                        if(item.State == FileStatus.Conflicted){
+                    {
+                        if (item.State == FileStatus.Conflicted)
+                        {
                             Commands.Stage(repo, item.FilePath);
                         }
                     }
+
                     repo.Commit(commitMessage, signature, signature);
                 }
-                  
 
-                //New commit message creation
+                // New commit message creation
                 var previousCommitResults = CompressionResult.ParseCommitMessage(oldCommit.Message);
                 var mergedResults = CompressionResult.Merge(optimizedImages, previousCommitResults);
                 var filteredResults = CompressionResult.Filter(mergedResults, deletedImagePaths.ToArray());
@@ -235,22 +237,24 @@ namespace CompressImagesFunction
                 // squash
                 var baseCommit = repo.Head.Commits.ElementAt(2);
                 repo.Reset(ResetMode.Soft, baseCommit);
-                repo.Commit(squashCommitMessage, signature, signature); 
+                repo.Commit(squashCommitMessage, signature, signature);
 
                 // rebase
-                var rebaseOptions = new RebaseOptions() {
+                var rebaseOptions = new RebaseOptions()
+                {
                     FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
                 };
 
                 var rebaseResult = repo.Rebase.Start(repo.Head, baseBranch, null, new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
-                
+
                 while (rebaseResult.Status == RebaseStatus.Conflicts)
                 {
                     var status = repo.RetrieveStatus(new LibGit2Sharp.StatusOptions() { });
                     foreach (var item in status)
-                    {   
-                        if(item.State == FileStatus.Conflicted){
-                            if(imagePaths.Contains(parameters.LocalPath + "/" + item.FilePath))
+                    {
+                        if (item.State == FileStatus.Conflicted)
+                        {
+                            if (imagePaths.Contains(parameters.LocalPath + "/" + item.FilePath))
                             {
                                 Commands.Stage(repo, item.FilePath);
                             }
@@ -260,6 +264,7 @@ namespace CompressImagesFunction
                             }
                         }
                     }
+
                     rebaseResult = repo.Rebase.Continue(new Identity(KnownGitHubs.ImgBotLogin, KnownGitHubs.ImgBotEmail), rebaseOptions);
                 }
             }
@@ -326,7 +331,8 @@ namespace CompressImagesFunction
             else
             {
                 var refs = $"refs/heads/{KnownGitHubs.BranchName}";
-                if (parameters.IsRebase) refs = refs.Insert(0, "+");
+                if (parameters.IsRebase)
+                    refs = refs.Insert(0, "+");
                 logger.LogInformation("refs: {refs}", refs);
 
                 repo.Network.Push(remote, refs, new PushOptions
@@ -334,6 +340,7 @@ namespace CompressImagesFunction
                     CredentialsProvider = credentialsProvider,
                 });
             }
+
             return true;
         }
 
