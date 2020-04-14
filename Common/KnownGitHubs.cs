@@ -2,7 +2,7 @@
 {
     public static class KnownGitHubs
     {
-        public const int AppId = 4706;
+        public const int AppId = 59669;
 
         public const string ImgBotLogin = "ImgBotApp";
 

@@ -62,7 +62,7 @@ namespace Install
             using (var http = new HttpClient())
             {
                 http.DefaultRequestHeaders.Add("Accept", "application/vnd.github.machine-man-preview+json");
-                http.DefaultRequestHeaders.Add("User-Agent", "ImgBot");
+                http.DefaultRequestHeaders.Add("User-Agent", "javierron");
                 http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwttoken);
 
                 var result = await http.PostAsync(input.AccessTokensUrl, null);
