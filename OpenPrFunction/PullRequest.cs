@@ -1,5 +1,6 @@
-﻿using System.Threading.Tasks;
-using System;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Common;
 using Common.TableModels;
 using Octokit;
@@ -32,19 +33,15 @@ namespace OpenPrFunction
             var stats = Stats.ParseStats(commit.Commit.Message);
 
             Octokit.PullRequest result;
-            if(update) {
-                //get PR number
+            if (update)
+            {
+                // get PR number
                 var allPrs = await githubClient.PullRequest.GetAllForRepository(parameters.RepoOwner, parameters.RepoName);
-                
-                var prNumber = 0;
-                foreach(var pr in allPrs) {
-                    if (pr.State == ItemState.Open && pr.Head.Sha == branch.Commit.Sha)
-                    {
-                        prNumber = (int)pr.Number;
-                    }
-                }
 
-                if (prNumber == 0) {
+                var pr = allPrs.First(p => p.State == ItemState.Open && p.Head.Sha == commit.Sha);
+
+                if (pr == null)
+                {
                     throw new Exception("Couldn't update PR. PR not found");
                 }
 
@@ -53,9 +50,10 @@ namespace OpenPrFunction
                     Body = PullRequestBody.Generate(stats),
                 };
 
-                result = await githubClient.PullRequest.Update(parameters.RepoOwner, parameters.RepoName, prNumber, pru);
+                result = await githubClient.PullRequest.Update(parameters.RepoOwner, parameters.RepoName, pr.Number, pru);
             }
-            else  {
+            else
+            {
                 var pr = new NewPullRequest(KnownGitHubs.CommitMessageTitle, KnownGitHubs.BranchName, baseBranch)
                 {
                     Body = PullRequestBody.Generate(stats),

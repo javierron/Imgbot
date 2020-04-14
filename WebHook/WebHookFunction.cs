@@ -189,9 +189,20 @@ namespace WebHook
                 return "This is not a PR";
             }
 
-            if (hook.comment.body != "@imgbot rebase")
+            if (hook.comment.body != "@imgbot rebase" || hook.issue.user.login != "imgbot[bot]")
             {
                 return "Not an ImgBot directive";
+            }
+
+            // private check
+            if (hook.repository?.@private == true)
+            {
+                var isPrivateEligible = await IsPrivateEligible(marketplaceTable, hook.repository.owner.login);
+                if (!isPrivateEligible)
+                {
+                    logger.LogError("ProcessRebase: Plan mismatch for {Owner}/{RepoName}", hook.repository.owner.login, hook.repository.name);
+                    throw new Exception("Plan mismatch");
+                }
             }
 
             await routerMessages.AddMessageAsync(new CloudQueueMessage(JsonConvert.SerializeObject(new RouterMessage
