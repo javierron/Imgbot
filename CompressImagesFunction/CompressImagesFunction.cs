@@ -130,12 +130,14 @@ namespace CompressImagesFunction
             }
             else if (didCompress)
             {
+                var update = compressImagesMessage.IsRebase;
                 logger.LogInformation("CompressImagesFunction: Successfully compressed images for {Owner}/{RepoName}", compressImagesMessage.Owner, compressImagesMessage.RepoName);
                 openPrMessages.Add(new OpenPrMessage
                 {
                     InstallationId = compressImagesMessage.InstallationId,
                     RepoName = compressImagesMessage.RepoName,
                     CloneUrl = compressImagesMessage.CloneUrl,
+                    Update = compressImagesMessage.IsRebase,
                 });
             }
 
