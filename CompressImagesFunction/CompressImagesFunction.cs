@@ -137,7 +137,7 @@ namespace CompressImagesFunction
                     InstallationId = compressImagesMessage.InstallationId,
                     RepoName = compressImagesMessage.RepoName,
                     CloneUrl = compressImagesMessage.CloneUrl,
-                    Update = update,
+                    Update = compressImagesMessage.IsRebase,
                 });
             }
 
