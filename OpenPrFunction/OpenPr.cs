@@ -74,7 +74,6 @@ namespace OpenPrFunction
                     RepoName = installation.RepoName,
                     RepoOwner = installation.Owner,
                 },
-                openPrMessage.Update,
                 settings);
 
             if (result?.Id > 0)

@@ -229,7 +229,7 @@ namespace CompressImagesFunction
                 }
 
                 // New commit message creation
-                var previousCommitResults = CompressionResult.ParseCommitMessage(oldCommit.Message);
+                var previousCommitResults = CommitMessage.ParseCommitMessage(oldCommit.Message);
                 var mergedResults = CompressionResult.Merge(optimizedImages, previousCommitResults);
                 var filteredResults = CompressionResult.Filter(mergedResults, deletedImagePaths.ToArray());
                 var squashCommitMessage = CommitMessage.Create(filteredResults);
